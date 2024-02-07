@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"name": "Sonar2D",
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"lvgl.h": "c",
+			"pda_menu.h": "c",
+			"list": "cpp",
+			"algorithm": "cpp",
+			"functional": "cpp",
+			"cmath": "cpp",
+			"array": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"arduino.h": "c",
+			"rp2040.h": "c",
+			"pda_vameter.h": "c",
+			"watchdog.h": "c",
+			"pda_la.h": "c"
+		}
+	}
+}
