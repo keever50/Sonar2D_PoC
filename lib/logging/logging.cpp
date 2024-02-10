@@ -1,3 +1,5 @@
+/*Coded by Kevin Witteveen*/
+
 #include <stdio.h>
 #include <logging.h>
 #include <Arduino.h>

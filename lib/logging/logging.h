@@ -1,3 +1,14 @@
+/*Coded by Kevin Witteveen*/
+
+/*
+The logging library.
+
+This library will make dealing with error messages and debug messages more easy.
+Also will make sure no errors will be reported in our precious clock cycles when its not needed.
+
+The LOG_LEVEL can be defined with LOG_LEVEL_xxx to customise your logging needs.
+*/
+
 #ifndef __LOGGING_H
 #define __LOGGING_H
 

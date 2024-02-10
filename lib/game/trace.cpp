@@ -1,3 +1,5 @@
+/*Coded by Kevin Witteveen*/
+
 #include <Arduino.h>
 #include <map.h>
 

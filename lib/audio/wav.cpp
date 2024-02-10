@@ -1,3 +1,5 @@
+/*Coded by Kevin Witteveen*/
+
 #include <Arduino.h>
 #include <wav.h>
 #include <LittleFS.h>
@@ -21,7 +23,6 @@ void wav_print_pcm_info(wav_pcm_s *wav)
 
 int wav_load_pcm(File file, wav_pcm_s *wav)
 {
-
     /*RIFF*/
     uint32_t chunk_id;
     uint32_t chunk_size;
@@ -74,6 +75,8 @@ int wav_load_pcm(File file, wav_pcm_s *wav)
     file.readBytes((char*)&byte_rate,4);
     file.readBytes((char*)&block_align,2);
     file.readBytes((char*)&bits_per_sample,2);
+
+    /*Data info*/
 
     uint32_t subchunk_id2;
     uint32_t data_size;
