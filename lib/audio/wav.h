@@ -24,7 +24,7 @@ typedef struct
     uint16_t block_align;
     uint16_t bits_per_sample;
     uint32_t data_size;
-    char *data;
+    uint8_t *data;
 }wav_pcm_s;
 
 /*PCM*/
@@ -40,7 +40,36 @@ This allocates ALL DATA into memory at once. (Call wav_unload_pcb to free)
 Returns a number when an error has occured.
 */
 int wav_load_pcm(File file, wav_pcm_s *wav);
+/*Does the same as wav_load_pcb, but does NOT load data into RAM.*/
+int wav_load_pcm_info(File file, wav_pcm_s *wav);
+
 /*
 Frees all the allocated memory
 */
 int wav_unload_pcm(wav_pcm_s *wav);
+
+
+/*Audio stream (Seperate this later)*/
+class Audio_Stream : public Stream
+{
+
+};
+
+/*Wav PCM stream*/
+class Wav_PCM_Stream : public Audio_Stream
+{
+public:
+    virtual int available() override;
+    virtual int read() override;
+    virtual int peek() override;
+    virtual void flush() override;
+    virtual size_t write(uint8_t) override;
+
+    int begin(File *file);
+
+private:
+    wav_pcm_s _wav;
+    File *_file;
+    int _file_data_start_pos;
+    int _file_data_end_pos;
+};

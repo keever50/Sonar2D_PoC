@@ -5,7 +5,7 @@
 #include <LittleFS.h>
 #include <logging.h>
 
-inline int32_t charptr_to_int32(char* ptr)
+inline int32_t charptr_to_int32(uint8_t* ptr)
 {
     return *(int32_t*)ptr;
 }
@@ -22,6 +22,85 @@ void wav_print_pcm_info(wav_pcm_s *wav)
 }
 
 int wav_load_pcm(File file, wav_pcm_s *wav)
+{
+    /*RIFF*/
+    uint32_t chunk_id;
+    uint32_t chunk_size;
+    uint32_t riff_format;
+
+    /*Check chunk ID if RIFF*/
+    file.read((uint8_t*)&chunk_id,4);
+    if(chunk_id!=WAV_RIFF_ID)
+    {
+        LOG_ERROR("WAV not loaded : Invalid chunk ID. Expected RIFF");
+        Serial.println(chunk_id);
+        return 1;
+    }
+    file.read((uint8_t*)&chunk_size,4);
+    /*Check riff format for WAVE*/
+    file.read((uint8_t*)&riff_format,4);
+    if(riff_format!=WAV_WAVE_ID)
+    {
+        LOG_ERROR("WAV not loaded : Invalid format. Expected WAV");
+        return 1;
+    }
+
+    /*WAVE*/
+    uint32_t subchunk_id;
+    uint32_t subchunk_size;
+    uint16_t audio_format;
+    uint16_t channels;
+    uint32_t sample_rate;
+    uint32_t byte_rate;
+    uint16_t block_align;
+    uint16_t bits_per_sample;
+
+    /*Check sub chunk ID for 'fmt '*/
+    file.read((uint8_t*)&subchunk_id,4);
+    if(subchunk_id!=WAV_FMT_ID) 
+    {
+        LOG_ERROR("WAV not loaded : Invalid sub chunk ID. Expected FMT");
+        return 1;        
+    }
+    file.read((uint8_t*)&subchunk_size,4);
+    /*Check if PCM*/
+    file.read((uint8_t*)&audio_format,2);
+    if(audio_format!=1) 
+    {
+        LOG_ERROR("WAV not loaded : Unexpected audio format. Expected PCM");
+        return 1;        
+    }    
+    file.read((uint8_t*)&channels,2);
+    file.read((uint8_t*)&sample_rate,4);
+    file.read((uint8_t*)&byte_rate,4);
+    file.read((uint8_t*)&block_align,2);
+    file.read((uint8_t*)&bits_per_sample,2);
+
+    /*Data info*/
+
+    uint32_t subchunk_id2;
+    uint32_t data_size;
+    file.read((uint8_t*)&subchunk_id2,4);
+    file.read((uint8_t*)&data_size,4);
+
+    /*DATA*/
+    uint8_t *data = (uint8_t*)malloc(data_size);
+    file.read(data, data_size);
+
+    /*Fill in wav_pcb_s struct*/
+    wav->chunk_size;
+    wav->channels=channels;
+    wav->sample_rate=sample_rate;
+    wav->byte_rate=byte_rate;
+    wav->block_align=block_align;
+    wav->bits_per_sample=bits_per_sample;
+    wav->data_size=data_size;
+    wav->data=data;
+
+    return 0;
+}
+
+int wav_load_pcm_info(File file, wav_pcm_s *wav)
 {
     /*RIFF*/
     uint32_t chunk_id;
@@ -83,10 +162,6 @@ int wav_load_pcm(File file, wav_pcm_s *wav)
     file.readBytes((char*)&subchunk_id2,4);
     file.readBytes((char*)&data_size,4);
 
-    /*DATA*/
-    char *data = (char*)malloc(data_size);
-    file.readBytes(data, data_size);
-
     /*Fill in wav_pcb_s struct*/
     wav->chunk_size;
     wav->channels=channels;
@@ -95,12 +170,61 @@ int wav_load_pcm(File file, wav_pcm_s *wav)
     wav->block_align=block_align;
     wav->bits_per_sample=bits_per_sample;
     wav->data_size=data_size;
-    wav->data=data;
 
-    return 0;
+    return 0;   
 }
+
 int wav_unload_pcm(wav_pcm_s *wav)
 {
     free(wav->data);
     return 0;
 }
+
+int Wav_PCM_Stream::read()
+{
+    uint8_t data = _file->read();
+    if(_file->position()>=_file_data_end_pos)
+    {
+        _file->seek(_file_data_start_pos);
+    }
+
+    return data;
+}
+
+int Wav_PCM_Stream::available()
+{
+    return 0;
+}
+int Wav_PCM_Stream::peek()
+{
+    return 0;
+}
+void Wav_PCM_Stream::flush()
+{
+
+}
+size_t Wav_PCM_Stream::write(uint8_t)
+{
+    return 0;
+}
+
+int Wav_PCM_Stream::begin(File *file)
+{
+    /*Check existance of the file and check if it is actually a file*/
+    if(file==nullptr || !file->isFile())  return 1;
+    _file = file;
+
+    /*Load wav file*/
+    int err = wav_load_pcm_info(*_file, &_wav);
+    if(err) return err;
+
+    _file_data_start_pos = _file->position();
+    if(_file_data_start_pos<0) return 1;
+    _file_data_end_pos = _file_data_start_pos+_wav.data_size;
+
+    Serial.println(_file_data_start_pos);
+    Serial.println(_file_data_end_pos);
+
+    return 0;
+}
+

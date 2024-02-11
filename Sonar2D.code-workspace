@@ -20,7 +20,12 @@
 			"rp2040.h": "c",
 			"pda_vameter.h": "c",
 			"watchdog.h": "c",
-			"pda_la.h": "c"
+			"pda_la.h": "c",
+			"random": "cpp",
+			"unordered_map": "cpp",
+			"initializer_list": "cpp",
+			"*.tcc": "cpp",
+			"ostream": "cpp"
 		}
 	}
 }
