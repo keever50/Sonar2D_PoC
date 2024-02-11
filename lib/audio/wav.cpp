@@ -182,7 +182,7 @@ int wav_unload_pcm(wav_pcm_s *wav)
 
 int Wav_PCM_Stream::read()
 {
-    uint8_t data = _file->read();
+    int data = _file->read();
     if(_file->position()>=_file_data_end_pos)
     {
         _file->seek(_file_data_start_pos);
