@@ -10,7 +10,7 @@ void Mixer_AudioGenerator::setVolume(float v)
     _volume_divisor = (int32_t)(1.0f/v);
 }
 
-void Mixer_Output::set_channel(int channel, Mixer_AudioGenerator* generator)
+void Mixer_Output::set_channel(int channel, Audio_Component_Output* generator)
 {
     if(channel<0) return;
     if(channel>=MIXER_MAX_CHANNELS) return;
@@ -29,24 +29,43 @@ int32_t Mixer_Output::mix(int32_t sample, int32_t pre_sample)
     }    
 }
 
-void Mixer_Output::callback(int samplesLeft, Mixer_Sample *sample)
+void Mixer_Output::set_volume(int channel, float v)
+{
+    if(channel<0) return;
+    if(channel>=MIXER_MAX_CHANNELS) return;
+
+    const int32_t max = 0x7FFFFFFF-1;
+    int32_t divisor=0;
+
+    if(v>=1.0f){divisor=1; return;}
+    if((1.0f/v)>=max){divisor=max; return;}
+    divisor = (int32_t)(1.0f/v);    
+
+    _volume_divisors[channel]=divisor;
+}
+
+int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
 {
     for(int i=0;i<MIXER_MAX_CHANNELS;i++)
     {
         /*Get generator and check existance*/
-        Mixer_AudioGenerator *generator=_inputs[i];
-        if(generator==nullptr) continue;
+        Audio_Component_Output *component_output=_inputs[i];
+        if(component_output==nullptr) continue;
 
         /*Catch sample*/
         static Mixer_Sample pre_sample;
-        generator->audioGenerator_cb(samplesLeft, &pre_sample);
+        component_output->get_sample(samplesLeft, &pre_sample);
 
         /*Volume mix samples if not zero*/
+        int32_t volume_divisor = _volume_divisors[i];
+        
+//TODO - skip when volume is zero!
+
         if (pre_sample.L != 0) {
-            pre_sample.L = hw_divider_quotient_s32(pre_sample.L, generator->_volume_divisor);
+            pre_sample.L = hw_divider_quotient_s32(pre_sample.L, volume_divisor);
         }
         if (pre_sample.R != 0 && !pre_sample.is_mono) { /*Only process R if not mono and not zero*/
-            pre_sample.R = hw_divider_quotient_s32(pre_sample.R, generator->_volume_divisor);
+            pre_sample.R = hw_divider_quotient_s32(pre_sample.R, volume_divisor);
         }
 
         /*Mixing based on mono/stereo configurations*/
@@ -77,4 +96,6 @@ void Mixer_Output::callback(int samplesLeft, Mixer_Sample *sample)
 
 
     }
+
+    return 0;
 }
