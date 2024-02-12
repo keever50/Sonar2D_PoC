@@ -65,6 +65,7 @@ public:
     virtual void flush() override;
     virtual size_t write(uint8_t) override;
 
+    /*File should be static and alive!*/
     int begin(File *file);
 
 private:

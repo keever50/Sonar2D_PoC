@@ -1,13 +1,14 @@
-#include <mixer.h>
+/*Coded by Kevin Witteveen*/
+#include <audio_mixer.h>
 #include <hardware/divider.h>
 
 void Mixer_AudioGenerator::setVolume(float v)
 {
-    const int32_t max = 0x7FFFFFFF-1;
-    
+    const int32_t max = INT32_MAX-1;
+    float inverse=1.0f/v;
     if(v>=1.0f){_volume_divisor=1; return;}
-    if((1.0f/v)>=max){_volume_divisor=max; return;}
-    _volume_divisor = (int32_t)(1.0f/v);
+    if(inverse>=max){_volume_divisor=max; return;}
+    _volume_divisor = (int32_t)inverse;
 }
 
 void Mixer_Output::set_channel(int channel, Audio_Component_Output* generator)
@@ -34,7 +35,7 @@ void Mixer_Output::set_volume(int channel, float v)
     if(channel<0) return;
     if(channel>=MIXER_MAX_CHANNELS) return;
 
-    const int32_t max = 0x7FFFFFFF-1;
+    const int32_t max = INT32_MAX-1;
     int32_t divisor=0;
 
     if(v>=1.0f){divisor=1; return;}

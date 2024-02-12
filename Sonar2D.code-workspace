@@ -25,7 +25,8 @@
 			"unordered_map": "cpp",
 			"initializer_list": "cpp",
 			"*.tcc": "cpp",
-			"ostream": "cpp"
+			"ostream": "cpp",
+			"compare": "cpp"
 		}
 	}
 }
