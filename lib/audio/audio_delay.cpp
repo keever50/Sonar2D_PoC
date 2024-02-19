@@ -11,7 +11,7 @@ int Audio_Delay::get_sample(int samplesLeft, Mixer_Sample* sample)
 
     /*Behind*/
     static int32_t olds;
-    tape[pos]=sample->L+(tape[pos]/1.05);
+    tape[pos]=sample->L+(tape[pos]/1.1);
 
     // for(int i=0;i<5;i++)
     // {
@@ -32,6 +32,8 @@ int Audio_Delay::get_sample(int samplesLeft, Mixer_Sample* sample)
     if(pos>=(sizeof(tape)/4)) pos=0;
     /*Ahead*/
     sample->L=tape[pos];
+
+    sample->is_mono=true;
 
     return 0;
 }

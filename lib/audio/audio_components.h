@@ -1,6 +1,16 @@
 #pragma once
 #include <Arduino.h>
 
+#define AUDIO_DEFAULT_SAMPLE_RATE       32000
+#define AUDIO_DEFAULT_STEREO            true
+
+class Audio_Info
+{
+public:
+   int samplerate=AUDIO_DEFAULT_SAMPLE_RATE;
+   bool stereo=AUDIO_DEFAULT_STEREO;
+};
+
 class Mixer_Sample
 {
 public:
@@ -18,15 +28,3 @@ public:
     }
 };
 
-
-class Mixer_AudioGenerator
-{
-public:
-    void(*audioGenerator_cb)(int samplesLeft, Mixer_Sample* sample);
-    /*0-1 float value representing 0-100%*/
-    void setVolume(float v);
-    int32_t _volume_divisor;
-private:
-    
-    
-};

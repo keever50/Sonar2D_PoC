@@ -9,5 +9,5 @@ public:
     void set_input(Audio_Component_Output *component);
 private:    
     Audio_Component_Output *_input;
-    int32_t tape[300];
+    int32_t tape[1000];
 };

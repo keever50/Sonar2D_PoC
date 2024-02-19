@@ -1,115 +1,114 @@
 #include <Arduino.h>
-#include <wav.h>
-#include <PWMAudio.h> /*By Earlephilhower. Audio bitrate fix contribution by Kevin Witteveen*/
-#include <LittleFS.h> /*By Earlephilhower*/
-#include <audio_mixer.h>
-#include <pico/stdlib.h>
-#include <audio_delay.h>
-PWMAudio pwm(0, false);
-Wav_PCM_Stream wav_stream;
-Mixer_Output mixer_output;
+#include <map_00_test.h>
+#include <map.h>
+#include <trace.h>
 
-void audio_cb()
+#define JOYSTICK_INNER_DEADZONE 10
+
+
+void joystick(int* X, int* Y)
 {
-    // static unsigned long end;
-    // unsigned long start = micros();
-    // unsigned long off_time = start - end;
-    for(;;)
+    int x=analogRead(A1)-510;
+    int y=analogRead(A0)-510;
+
+    if(abs(x)>JOYSTICK_INNER_DEADZONE)
     {
-        int avail = pwm.available();
-        if(avail==0)break;
-        Mixer_Sample sample;
-        sample.L=0;
-        sample.R=0;
-        sample.is_mono=true;
-        mixer_output.get_sample(avail, &sample);
-        pwm.write((int16_t)(sample.L>>16), true);
-        //pwm.write((int16_t)0, true);
+        *X=x;
+    }else{
+        *X=0;
     }
-    // end = micros();
-    // Serial.printf("time: %duS. Off time: %dus\n",end-start,off_time);
+
+    if(abs(y)>JOYSTICK_INNER_DEADZONE)
+    {
+        *Y=y;
+    }else{
+        *Y=0;
+    }
+
 }
 
-class Test_Audio : public Audio_Component_Output
+map_vect non_persistent_cells[32];
+
+void draw_non_persistent_cell(map_vect pos, char c, int ID)
 {
-    virtual int get_sample(int samplesLeft, Mixer_Sample* sample) override
-    {
-        int32_t data = 0;//((int32_t)(wav_stream.read()-0x7F))<<24;
+    map_vect* old_pos = &non_persistent_cells[ID];
 
-        // data |= (int32_t)(wav_stream.read())<<0;
-        // data |= (int32_t)(wav_stream.read())<<8;
-        // data = data <<16;
-        // sample->L=data; 
+    /*Skip when no change*/
+    if(old_pos->x==pos.x && old_pos->y==pos.y) return;
+    /*Remove old*/
+    Serial.printf("\e[%d;%dH ",1+(int)old_pos->y,1+(int)old_pos->x);   
+    /*Place new*/
+    Serial.printf("\e[%d;%dH%c",1+(int)pos.y,1+(int)pos.x, c); 
+    /*Remember old*/
+    non_persistent_cells[ID] = pos;
+}
 
-        static int previous_sample_count;
-        static Mixer_Sample previous_sample;
+void draw_ent(map_entity *ent)
+{
+    map_vect vect;
+    vect = ent->get_pos();
+    Serial.printf("\e[32m"); /*Green ON*/
+    draw_non_persistent_cell(vect, 'X', 0);
 
-        if(previous_sample_count==samplesLeft)
-        {
-            *sample=previous_sample;
-            return 0;
-        }
+    vect = ent->get_pos()+(ent->get_forward()*3.0f);
+    Serial.printf("\e[31m"); /*Red ON*/
+    draw_non_persistent_cell(vect, 'F', 1);
 
-        sample->L=((int32_t)(wav_stream.read()-0x7F))<<24;
-        sample->is_mono=true;
+    vect = ent->get_pos()+(ent->get_left()*3.0f);
+    Serial.printf("\e[34m"); /*Blue ON*/
+    draw_non_persistent_cell(vect, 'L', 2);
 
-        previous_sample=*sample;
-        previous_sample_count=samplesLeft;
-        return 0;
-    }
-};
+    /*Test trace*/
 
-Test_Audio audio_source;
-Audio_Delay audio_delay;
+    map_vect dist = trace_distance(MAP_00_test, ent->get_pos().x, ent->get_pos().y, ent->get_forward().x, ent->get_forward().y);
+    Serial.printf("\e[35m"); /*Red ON*/
+    draw_non_persistent_cell(dist, 'H', 3);
 
-File file0;
+
+    Serial.printf("\e[0m"); /*Reset*/
+
+
+
+}
+
+map_entity player;
+
 void setup()
 {
+    Serial.begin(250000);   
+    Serial.print("\e[25l");
 
-    // vreg_set_voltage(VREG_VOLTAGE_1_20);
-    // set_sys_clock_khz(300000000 / 1000, false);
-
-    // for(int i=0;i<1000000;i++)
-    // {
-    //     volatile int32_t A = i+5;
-    // }
-
-    // set_sys_clock_khz(250000000 / 1000, false);
-    // vreg_set_voltage(VREG_VOLTAGE_1_10);
-    
-
-    Serial.begin(250000);
-
-    LittleFS.begin();
-    
-    static File TEST = LittleFS.open("/amen_break_8000hz.wav", "r");
-    file0 = LittleFS.open("/train_32k_16b.wav", "r");
-    if(!file0)
-    {
-        Serial.println("Opening failed");
-    }else{
-       if(wav_stream.begin(&TEST))
-       {
-            Serial.println("Loading failed");
-       }else{
-        
-        audio_delay.set_input(&audio_source);
-        mixer_output.set_channel(0, &audio_source);
-        mixer_output.set_volume(0, 0.6f);
-        mixer_output.set_channel(1, &audio_delay);
-        mixer_output.set_volume(1, 0.4f);
-
-        pwm.setBuffers(4, 100);
-        pwm.begin(8000,100000);
-        pwm.onTransmit(audio_cb);
-       }
-
-    }
-
+    map_vect pos;
+    pos.x=50;
+    pos.y=50;
+    player.set_pos(pos);
 }
+
 
 void loop()
 {
-    delay(500);
-    Serial.printf("temp: %fC\n",analogReadTemp());
+    static unsigned long next_map_draw;
+    if(millis()>=next_map_draw)
+    {
+        map_draw(MAP_00_test);
+        next_map_draw=next_map_draw+2000;
+    }
+    
+
+    int X,Y;
+    joystick(&X,&Y);
+    map_vect vel;
+    vel.x=-((float)X/100.0f);
+    vel.y=((float)Y/100.0f);
+    
+    static float A;
+    A=A+10;
+    player.set_ang(A);
+    player.move(player.get_forward()*vel.y);
+    player.move(player.get_left()*vel.x);
+
+    draw_ent(&player);
+
+    Serial.printf("\e[H\n");
+    delay(100);
 }

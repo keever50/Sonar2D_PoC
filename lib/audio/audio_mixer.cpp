@@ -2,14 +2,6 @@
 #include <audio_mixer.h>
 #include <hardware/divider.h>
 
-void Mixer_AudioGenerator::setVolume(float v)
-{
-    const int32_t max = INT32_MAX-1;
-    float inverse=1.0f/v;
-    if(v>=1.0f){_volume_divisor=1; return;}
-    if(inverse>=max){_volume_divisor=max; return;}
-    _volume_divisor = (int32_t)inverse;
-}
 
 void Mixer_Output::set_channel(int channel, Audio_Component_Output* generator)
 {
@@ -60,14 +52,22 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
         /*Volume mix samples if not zero*/
         int32_t volume_divisor = _volume_divisors[i];
         
-//TODO - skip when volume is zero!
+        if(volume_divisor==INT32_MAX)
+        {
+            sample->L=0;
+            sample->R=0;
+            return 0;
+        }
+        if(volume_divisor>1)
+        {
+            if (pre_sample.L != 0) {
+                pre_sample.L = hw_divider_quotient_s32(pre_sample.L, volume_divisor);
+            }
+            if (pre_sample.R != 0 && !pre_sample.is_mono) { /*Only process R if not mono and not zero*/
+                pre_sample.R = hw_divider_quotient_s32(pre_sample.R, volume_divisor);
+            }
+        }
 
-        if (pre_sample.L != 0) {
-            pre_sample.L = hw_divider_quotient_s32(pre_sample.L, volume_divisor);
-        }
-        if (pre_sample.R != 0 && !pre_sample.is_mono) { /*Only process R if not mono and not zero*/
-            pre_sample.R = hw_divider_quotient_s32(pre_sample.R, volume_divisor);
-        }
 
         /*Mixing based on mono/stereo configurations*/
         if (!pre_sample.is_mono) {
