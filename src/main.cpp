@@ -60,9 +60,9 @@ void draw_ent(map_entity *ent)
 
     /*Test trace*/
 
-    map_vect dist = trace_distance(MAP_00_test, ent->get_pos().x, ent->get_pos().y, ent->get_forward().x, ent->get_forward().y);
+    map_vect hit = trace_fire(MAP_00_test, ent->get_pos(), ent->get_forward());
     Serial.printf("\e[35m"); /*Red ON*/
-    draw_non_persistent_cell(dist, 'H', 3);
+    draw_non_persistent_cell(hit, 'H', 3);
 
 
     Serial.printf("\e[0m"); /*Reset*/
@@ -71,7 +71,7 @@ void draw_ent(map_entity *ent)
 
 }
 
-map_entity player;
+map_entity player(MAP_00_test);
 
 void setup()
 {
@@ -79,8 +79,8 @@ void setup()
     Serial.print("\e[25l");
 
     map_vect pos;
-    pos.x=50;
-    pos.y=50;
+    pos.x=10;
+    pos.y=10;
     player.set_pos(pos);
 }
 
@@ -103,9 +103,10 @@ void loop()
     
     static float A;
     A=A+10;
-    player.set_ang(A);
+    //player.set_ang(A);
     player.move(player.get_forward()*vel.y);
-    player.move(player.get_left()*vel.x);
+    //player.move(player.get_left()*vel.x);
+    player.set_ang(player.get_ang()+vel.x*4.0f);
 
     draw_ent(&player);
 

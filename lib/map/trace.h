@@ -11,4 +11,8 @@ This will fire a laser to measure the distance from an empty cell and an occupie
 
 Returns distance as float.
 */
-map_vect trace_distance(const uint8_t *map, float x, float y, float x_dir, float y_dir);
+map_vect trace_fire(const uint8_t *map, float x, float y, float x_dir, float y_dir);
+map_vect trace_fire(const uint8_t *map, map_vect pos, map_vect dir);
+
+/*Measures the distance between trace firing position and hit as a return vector.*/
+map_vect trace_fire_distance(const uint8_t *map, map_vect pos, map_vect dir);
