@@ -26,7 +26,8 @@
 			"initializer_list": "cpp",
 			"*.tcc": "cpp",
 			"ostream": "cpp",
-			"compare": "cpp"
+			"compare": "cpp",
+			"atomic": "cpp"
 		}
 	}
 }

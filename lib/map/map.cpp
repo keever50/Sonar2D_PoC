@@ -59,7 +59,7 @@ void map_draw( const uint8_t *map )
 map_vect map_vect::normalize()
 {
     map_vect new_vect;
-    float inverse_length = invSqrt(powf(this->x,2.0F)+powf(this->y,2.0F));
+    float inverse_length = invSqrt(pow(this->x,2)+pow(this->y,2));
     new_vect.x = this->x * inverse_length;
     new_vect.y = this->y * inverse_length;
     return new_vect;

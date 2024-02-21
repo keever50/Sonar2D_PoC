@@ -208,6 +208,23 @@ size_t Wav_PCM_Stream::write(uint8_t)
     return 0;
 }
 
+void Wav_PCM_Stream::seek(int pos)
+{
+    int setpos = pos;
+    if(pos>_file_data_end_pos)
+    {
+        setpos = _file_data_start_pos+(pos-_file_data_end_pos);
+    }
+
+    if(pos<_file_data_start_pos)
+    {
+        setpos = _file_data_end_pos-(_file_data_start_pos-pos);  
+    }
+
+    _file->seek(setpos);
+
+}
+
 int Wav_PCM_Stream::begin(File *file)
 {
     /*Check existance of the file and check if it is actually a file*/
@@ -226,5 +243,10 @@ int Wav_PCM_Stream::begin(File *file)
     Serial.println(_file_data_end_pos);
 
     return 0;
+}
+
+int Wav_PCM_Stream::get_sample_rate()
+{
+    return _wav.sample_rate;
 }
 

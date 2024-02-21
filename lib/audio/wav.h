@@ -63,10 +63,13 @@ public:
     virtual int read() override;
     virtual int peek() override;
     virtual void flush() override;
+    void seek( int pos );
     virtual size_t write(uint8_t) override;
 
     /*File should be static and alive!*/
     int begin(File *file);
+
+    int get_sample_rate();
 
 private:
     wav_pcm_s _wav;
