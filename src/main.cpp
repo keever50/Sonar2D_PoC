@@ -143,7 +143,14 @@ void setup()
     wav_src.load(&file0, true);
 
     mixer_master.set_channel(0, &wav_src);
-    mixer_master.set_volume(0,1.0F);
+    mixer_master.set_volume(0,1.0F,1.0F);
+
+    analogWriteFreq(22000);
+    analogWrite(21, 80);
+
+    analogWriteFreq(22000);
+    analogWrite(9, 80);    
+    
 }
 
 
@@ -173,5 +180,23 @@ void loop()
     draw_ent(&player);
 
     Serial.printf("\e[H\n");
-    delay(500);
+
+    map_vect vec;
+    vec.x=0; vec.y=1;
+    float panning = player.get_forward().crossZ(vec);
+    vec.x=1; vec.y=0;
+    float front = 0.5+(1+player.get_forward().crossZ(vec))/4.0;
+
+    float L,R;
+    if(panning>0){
+        R=(1.0-panning);
+        L=1.0;
+    }else{
+        R=1.0;
+        L=(1.0+panning);
+    }
+    //mixer_master.set_volume(0,L*front, R*front);
+    Serial.printf("cross %f\n", panning);
+
+    delay(100);
 }

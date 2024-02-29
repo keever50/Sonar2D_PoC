@@ -16,7 +16,8 @@ public:
     float x=0, y=0;
 
     map_vect normalize();
-
+    /*Cross product*/
+    float crossZ(map_vect &vect);
     //float distance(const map_vect &vect);
     map_vect operator+(const map_vect &vect);
     map_vect operator-(const map_vect &vect);

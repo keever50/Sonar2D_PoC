@@ -22,19 +22,23 @@ int32_t Mixer_Output::mix(int32_t sample, int32_t pre_sample)
     }    
 }
 
-void Mixer_Output::set_volume(int channel, float v)
+void Mixer_Output::set_volume(int channel, float L, float R)
 {
     if(channel<0) return;
     if(channel>=MIXER_MAX_CHANNELS) return;
 
     const int32_t max = INT32_MAX-1;
     int32_t divisor=0;
+    if(L>=1.0f){divisor=1;}
+    if((1.0f/L)>=max){divisor=max;}
+    divisor = (int32_t)(1.0f/L);    
+    _volume_divisorsL[channel]=divisor;
 
-    if(v>=1.0f){divisor=1; return;}
-    if((1.0f/v)>=max){divisor=max; return;}
-    divisor = (int32_t)(1.0f/v);    
-
-    _volume_divisors[channel]=divisor;
+    divisor=0;
+    if(R>=1.0f){divisor=1;}
+    if((1.0f/R)>=max){divisor=max;}
+    divisor = (int32_t)(1.0f/R);    
+    _volume_divisorsR[channel]=divisor;
 }
 
 int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
@@ -50,23 +54,24 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
         component_output->get_sample(samplesLeft, &pre_sample);
 
         /*Volume mix samples if not zero*/
-        int32_t volume_divisor = _volume_divisors[i];
-        
-        if(volume_divisor==INT32_MAX)
-        {
-            sample->L=0;
-            sample->R=0;
-            return 0;
-        }
-        if(volume_divisor>1)
-        {
-            if (pre_sample.L != 0) {
-                pre_sample.L = hw_divider_quotient_s32(pre_sample.L, volume_divisor);
+        int32_t volume_divisorL = _volume_divisorsL[i];
+        int32_t volume_divisorR = _volume_divisorsR[i];
+
+        // if(volume_divisor==INT32_MAX)
+        // {
+        //     sample->L=0;
+        //     sample->R=0;
+        //     return 0;
+        // }
+        //if(volume_divisor>1)
+        //{
+            if (pre_sample.L != 0 && volume_divisorL>1) {
+                pre_sample.L = hw_divider_quotient_s32(pre_sample.L, volume_divisorL);
             }
-            if (pre_sample.R != 0 && !pre_sample.is_mono) { /*Only process R if not mono and not zero*/
-                pre_sample.R = hw_divider_quotient_s32(pre_sample.R, volume_divisor);
+            if (pre_sample.R != 0 && !pre_sample.is_mono && volume_divisorR>1) { /*Only process R if not mono and not zero*/
+                pre_sample.R = hw_divider_quotient_s32(pre_sample.R, volume_divisorR);
             }
-        }
+        //}
 
 
         /*Mixing based on mono/stereo configurations*/

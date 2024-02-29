@@ -56,6 +56,13 @@ void map_draw( const uint8_t *map )
     Serial.printf("\e[%d;1H", MAP_SIZE);
 }
 
+float map_vect::crossZ(map_vect &vect)
+{
+    float z;
+    z=this->x*vect.y-this->y*vect.x;
+    return z;
+}
+
 map_vect map_vect::normalize()
 {
     map_vect new_vect;

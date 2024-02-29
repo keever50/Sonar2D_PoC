@@ -4,20 +4,18 @@
 #define AUDIO_DEFAULT_SAMPLE_RATE       32000
 #define AUDIO_DEFAULT_STEREO            true
 
-class Audio_Info
+typedef struct
 {
-public:
    int samplerate=AUDIO_DEFAULT_SAMPLE_RATE;
    bool stereo=AUDIO_DEFAULT_STEREO;
-};
+} Audio_Info;
 
-class Mixer_Sample
+typedef struct 
 {
-public:
     int32_t L=0;
     int32_t R=0;
     bool is_mono=false;
-};
+} Mixer_Sample;
 
 
 class Audio_Component_Output 
