@@ -22,23 +22,34 @@ int32_t Mixer_Output::mix(int32_t sample, int32_t pre_sample)
     }    
 }
 
+/*We scale our divisor up by 1<<precision. We also scale up the nominator later. This improves integer division accuracy. Something about fixed floating points*/
+int32_t mixer_calc_volume_div(float v)
+{
+    if(v>1.0F) return 1<<MIXER_VOLUME_ACCURACY;
+    if(v<0.0F) return INT32_MAX-1;
+    if((1.0F/v)>=INT32_MAX-1) return INT32_MAX-1;
+    return (int32_t)((1.0F/v)*(1<<MIXER_VOLUME_ACCURACY));    
+}
+
 void Mixer_Output::set_volume(int channel, float L, float R)
 {
     if(channel<0) return;
     if(channel>=MIXER_MAX_CHANNELS) return;
 
-    const int32_t max = INT32_MAX-1;
-    int32_t divisor=0;
-    if(L>=1.0f){divisor=1;}
-    if((1.0f/L)>=max){divisor=max;}
-    divisor = (int32_t)(1.0f/L);    
-    _volume_divisorsL[channel]=divisor;
+    _volume_divisorsL[channel]=mixer_calc_volume_div(L);
+    _volume_divisorsR[channel]=mixer_calc_volume_div(R);
+    // const int32_t max = INT32_MAX-1;
+    // int32_t divisor=0;
+    // if(L>=1.0f){divisor=1;}
+    // if((1.0f/L)>=max){divisor=max;}
+    // divisor = (int32_t)(1.0f/L);    
+    // _volume_divisorsL[channel]=divisor;
 
-    divisor=0;
-    if(R>=1.0f){divisor=1;}
-    if((1.0f/R)>=max){divisor=max;}
-    divisor = (int32_t)(1.0f/R);    
-    _volume_divisorsR[channel]=divisor;
+    // divisor=0;
+    // if(R>=1.0f){divisor=1;}
+    // if((1.0f/R)>=max){divisor=max;}
+    // divisor = (int32_t)(1.0f/R);    
+    // _volume_divisorsR[channel]=divisor;
 }
 
 int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
@@ -65,12 +76,7 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
         // }
         //if(volume_divisor>1)
         //{
-            if (pre_sample.L != 0 && volume_divisorL>1) {
-                pre_sample.L = hw_divider_quotient_s32(pre_sample.L, volume_divisorL);
-            }
-            if (pre_sample.R != 0 && !pre_sample.is_mono && volume_divisorR>1) { /*Only process R if not mono and not zero*/
-                pre_sample.R = hw_divider_quotient_s32(pre_sample.R, volume_divisorR);
-            }
+
         //}
 
 
@@ -100,6 +106,13 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
             }
         }
 
+        /*Panning and volume*/
+        if (sample->L != 0 && volume_divisorL>1) {
+            sample->L = hw_divider_quotient_s32((sample->L)<<MIXER_VOLUME_ACCURACY, volume_divisorL);
+        }
+        if (sample->R != 0 && volume_divisorR>1) { 
+            sample->R = hw_divider_quotient_s32((sample->R)<<MIXER_VOLUME_ACCURACY, volume_divisorR);
+        }
 
     }
 

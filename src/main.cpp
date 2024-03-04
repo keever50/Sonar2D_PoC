@@ -13,9 +13,15 @@
 #include <SD.h> 
 #include <SDFS.h> 
 
+/*Controls*/
+#define JOYSTICK_INNER_DEADZONE 0.06F
+#define CONTROLS_AIM        A0
+#define CONTROLS_WALK       A1
+#define CONTROLS_STRAVE     A2
+
 /*Audio*/
 #define AUDIO_MODULATION_FREQUENCY      100000
-#define AUDIO_MASTER_SAMPLE_RATE        8000
+#define AUDIO_MASTER_SAMPLE_RATE        16000
 PWMAudio audio_pwm_output(0, true);
 Audio_Wav_Source wav_src;
 Mixer_Output mixer_master;
@@ -28,36 +34,19 @@ void audio_cb()
         if(avail==0)break;
         Mixer_Sample sample;
         mixer_master.get_sample(avail, &sample);
-        audio_pwm_output.write((int16_t)(sample.L>>16), true);
-        audio_pwm_output.write((int16_t)(sample.R>>16), true);
+        audio_pwm_output.write((int16_t)(sample.L), true);
+        audio_pwm_output.write((int16_t)(sample.R), true);
         //pwm.write((int16_t)0, true);
     }
 }
 ///
 
-/*Controls*/
-#define JOYSTICK_INNER_DEADZONE 10
-void joystick(int* X, int* Y)
+float joystick(pin_size_t pin)
 {
-    int x=analogRead(A1)-510;
-    int y=analogRead(A0)-510;
-
-    if(abs(x)>JOYSTICK_INNER_DEADZONE)
-    {
-        *X=x;
-    }else{
-        *X=0;
-    }
-
-    if(abs(y)>JOYSTICK_INNER_DEADZONE)
-    {
-        *Y=y;
-    }else{
-        *Y=0;
-    }
-
+    float in = (float)(analogRead(pin)-512)/512.0F;
+    if(in>JOYSTICK_INNER_DEADZONE || in<-JOYSTICK_INNER_DEADZONE) return in;
+    else return 0.0F;
 }
-///
 
 /*Debug*/
 map_vect non_persistent_cells[32];
@@ -97,6 +86,11 @@ void draw_ent(map_entity *ent)
     draw_non_persistent_cell(hit, 'H', 3);
 
     Serial.printf("\e[0m"); /*Reset*/
+}
+
+void show_inputs()
+{
+    Serial.printf("Joysticks: %f, %f, %f\n", joystick(CONTROLS_STRAVE),joystick(CONTROLS_WALK),joystick(CONTROLS_AIM));
 }
 ///
 
@@ -146,11 +140,19 @@ void setup()
     mixer_master.set_volume(0,1.0F,1.0F);
 
     analogWriteFreq(22000);
-    analogWrite(21, 80);
+    analogWrite(21, 0);
 
     analogWriteFreq(22000);
-    analogWrite(9, 80);    
+    analogWrite(9, 0);    
     
+
+    // for(;;)
+    // {
+    //     delay(50);
+    //     show_inputs();
+    //     analogWrite(9, joystick(CONTROLS_AIM)*200.0F);  
+    //     analogWrite(21, -joystick(CONTROLS_AIM)*200.0F);  
+    // }
 }
 
 
@@ -159,44 +161,37 @@ void loop()
     static unsigned long next_map_draw;
     if(millis()>=next_map_draw)
     {
-        map_draw(MAP_00_test);
+        //map_draw(MAP_00_test);
+        //draw_ent(&player);
         next_map_draw=next_map_draw+2000;
     }
     
-
-    int X,Y;
-    joystick(&X,&Y);
-    map_vect vel;
-    vel.x=-((float)X/100.0f);
-    vel.y=((float)Y/100.0f);
-    
-    static float A;
-    A=A+10;
-    //player.set_ang(A);
-    player.move(player.get_forward()*vel.y);
-    //player.move(player.get_left()*vel.x);
-    player.set_ang(player.get_ang()+vel.x*4.0f);
-
-    draw_ent(&player);
-
-    Serial.printf("\e[H\n");
+    static float ply_ang;
+    ply_ang=ply_ang+joystick(CONTROLS_AIM)*1.0F;
+    player.set_ang(ply_ang);
 
     map_vect vec;
-    vec.x=0; vec.y=1;
-    float panning = player.get_forward().crossZ(vec);
-    vec.x=1; vec.y=0;
-    float front = 0.5+(1+player.get_forward().crossZ(vec))/4.0;
+    vec.x=0;
+    vec.y=1;
+    float z =player.get_forward().crossZ(vec);
+    float L, R;
 
-    float L,R;
-    if(panning>0){
-        R=(1.0-panning);
-        L=1.0;
+    if(z>0)
+    {
+        R=1;
+        L=1.0F-z;
     }else{
-        R=1.0;
-        L=(1.0+panning);
+        R=1.0F+z;
+        L=1;
     }
-    //mixer_master.set_volume(0,L*front, R*front);
-    Serial.printf("cross %f\n", panning);
 
-    delay(100);
+
+
+    Serial.printf("L%f, R%f, Z%f\n", L, R, z);
+    map_vect vec_dist = trace_fire_distance(MAP_00_test, player.get_pos(), player.get_forward());
+
+    //wav_src.pitch( sqrt( pow(vec_dist.x,2)+pow(vec_dist.y,2) )/25.0F );
+    mixer_master.set_volume(0, L,R);
+
+    delay(10);
 }

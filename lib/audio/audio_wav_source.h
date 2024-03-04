@@ -8,6 +8,7 @@
 
 #define AUDIO_WAV_SRC_BUFFER_SIZE   256
 
+/*Todo: Create a more elegant way to check stereo without accessing the stream or audio_info class*/
 class Audio_Wav_Source : public Audio_Component_Output
 {
 public:
@@ -27,7 +28,7 @@ private:
     bool _mode=AUDIO_WAV_SRC_MODE_STREAM; 
     bool _loaded=false;
     bool _running=false;
-
+    float _pitch=1.0F;
     int _step_speed=0;
     Wav_PCM_Stream _stream;
 

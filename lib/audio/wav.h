@@ -71,7 +71,7 @@ public:
 
     int get_sample_rate();
 
-private:
+
     wav_pcm_s _wav;
     File *_file;
     int _file_data_start_pos;

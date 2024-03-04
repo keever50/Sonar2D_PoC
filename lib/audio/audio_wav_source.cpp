@@ -15,7 +15,14 @@ int Audio_Wav_Source::load(File *file, bool stream)
     if(_stream.begin(_file)) return 1;
    
     float speed = (float)(_stream.get_sample_rate()) / (float)(_info.samplerate);
-    _step_speed = (1<<AUDIO_WAV_PRECISION)*speed;
+    _step_speed = (1<<AUDIO_WAV_PRECISION)*speed*_pitch;
+
+    /*Mono*/
+    if(_stream._wav.channels==1)
+    {
+        _step_speed=_step_speed/2.0F;
+    }
+    
 
     _loaded=true;
     return 0;
@@ -34,6 +41,21 @@ int Audio_Wav_Source::stop()
     return 0;    
 }
 
+int Audio_Wav_Source::pitch(float v)
+{
+    if(_pitch==v) return 0;
+    _pitch=v;
+
+    float speed = (float)(_stream.get_sample_rate()) / (float)(_info.samplerate);
+    _step_speed = (1<<AUDIO_WAV_PRECISION)*speed*_pitch;
+
+    /*Mono*/
+    if(_stream._wav.channels==1)
+    {
+        _step_speed=_step_speed/2.0F;
+    }
+    return 0;    
+}
 
 int Audio_Wav_Source::get_sample(int samplesLeft, Mixer_Sample* sample)
 {
@@ -45,16 +67,25 @@ int Audio_Wav_Source::get_sample(int samplesLeft, Mixer_Sample* sample)
     /*Optimize this. Prevent double reads. Prevent single seeks*/
     _stream.seek((_counter>>AUDIO_WAV_PRECISION)*4);
 
-    int32_t data;
-    data |= (int32_t)(_stream.read())<<0;
-    data |= (int32_t)(_stream.read())<<8;
-    data = data <<16;
+    int16_t data;
+    data |= (int16_t)(_stream.read())<<0;
+    data |= (int16_t)(_stream.read())<<8;
+    //data = data <<16;
     sample->L=data; 
-    data=0;
-    data |= (int32_t)(_stream.read())<<0;
-    data |= (int32_t)(_stream.read())<<8;
-    data = data <<16;
-    sample->R=data; 
+
+    /*Dont do this in mono!*/
+    if(_stream._wav.channels==2)
+    {
+        data=0;
+        data |= (int16_t)(_stream.read())<<0;
+        data |= (int16_t)(_stream.read())<<8;
+        //data = data <<16;
+        sample->R=data; 
+    }else{
+        /*Do this in mono tho*/
+        sample->is_mono=true;
+    }
+
 
     return 0;    
 }
