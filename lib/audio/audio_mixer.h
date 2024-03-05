@@ -5,7 +5,7 @@
 #include <audio_components.h>
 
 #define MIXER_MAX_CHANNELS  32
-#define MIXER_VOLUME_ACCURACY   10
+#define MIXER_VOLUME_ACCURACY   15
 
 
 
