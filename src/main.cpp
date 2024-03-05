@@ -22,25 +22,32 @@
 
 /*Audio*/
 #define AUDIO_MODULATION_FREQUENCY      200'000
-#define AUDIO_MASTER_SAMPLE_RATE        16'000
+#define AUDIO_MASTER_SAMPLE_RATE        8'000
 PWMAudio audio_pwm_output(0, true);
 Audio_Wav_Source wav_src;
-//Audio_Wav_Source wav_src2;
+Audio_Wav_Source wav_src2;
+Audio_Wav_Source wav_src3;
 Mixer_Output mixer_master;
 SM_manager sm_manager;
 
 void audio_cb()
 {
+    static unsigned long end;
+    Serial.printf("between time: %duS\n",micros()-end);
+    unsigned long start = micros();
     for(;;)
     {
         int avail = audio_pwm_output.available();
         if(avail==0)break;
         Mixer_Sample sample;
-        wav_src.get_sample(avail, &sample);
+        mixer_master.get_sample(avail, &sample);
         audio_pwm_output.write((int16_t)(sample.L), true);
         audio_pwm_output.write((int16_t)(sample.R), true);
         //pwm.write((int16_t)0, true);
     }
+    end = micros();
+    unsigned long delta = end - start;
+    Serial.printf("sound time: %duS\n\n",delta);
 }
 ///
 
@@ -124,27 +131,34 @@ void setup()
     SPI.setCS(5);
     SPI.begin(false);
     SD.begin(5, SPI);
-    SDFSConfig c2;
-    c2.setSPISpeed(125'000'000);
-    c2.setCSPin(5);
+    LittleFSConfig c2;
+    //c2.setSPISpeed(125'000'000);
+    //c2.setCSPin(5);
     
-    SDFS.setConfig(c2);
-    SDFS.begin();
+    LittleFS.setConfig(c2);
+    LittleFS.begin();
 
     /*Audio*/
-    static File file0 = SDFS.open("/amen.wav", "r");
+    static File file0 = LittleFS.open("/amen.wav", "r");
     if(!file0)
     {
         while(true){ delay(500); Serial.println("No file"); }
     }
 
-    // static File file1 = SDFS.open("/BBD.wav", "r");
-    // if(!file1)
-    // {
-    //     while(true){ delay(500); Serial.println("No file"); }
-    // }
+    static File file1 = LittleFS.open("/SONAR.wav", "r");
+    if(!file1)
+    {
+        while(true){ delay(500); Serial.println("No file"); }
+    }
 
-    audio_pwm_output.setBuffers(4, 256);
+    static File file2 = LittleFS.open("/drip_16b.wav", "r");
+    if(!file2)
+    {
+        while(true){ delay(500); Serial.println("No file"); }
+    }
+
+
+    audio_pwm_output.setBuffers(4, 100);
     audio_pwm_output.begin(AUDIO_MASTER_SAMPLE_RATE,AUDIO_MODULATION_FREQUENCY);
     audio_pwm_output.onTransmit(audio_cb);
     ///
@@ -155,12 +169,17 @@ void setup()
     inf.samplerate=AUDIO_MASTER_SAMPLE_RATE;
     inf.stereo=true;
 
+    
     wav_src.begin(&inf);
-    wav_src.load(&file0, true);
+    wav_src.load(&file0, false);
 
-    // wav_src2.begin(&inf);
-    // wav_src2.load(&file1, true);
-    // wav_src2.pitch(0.5);
+    wav_src2.begin(&inf);
+    wav_src2.load(&file1, true);
+    wav_src2.pitch(0.5);
+
+    wav_src3.begin(&inf);
+    wav_src3.load(&file2, true);
+    wav_src3.pitch(1.2);
 
     SM_listener listener;
     listener.ent=&player;
@@ -183,10 +202,12 @@ void setup()
 
     sm_manager.start();
 
-    //mixer_master.set_channel(0, &wav_src);
-    //mixer_master.set_channel(1, &wav_src2);
-    //mixer_master.set_volume(0,0.5F,0.5F);
-    //mixer_master.set_volume(1,0.5F,0.5F);
+    mixer_master.set_channel(0, &wav_src);
+    mixer_master.set_channel(1, &wav_src2);
+    mixer_master.set_channel(2, &wav_src3);
+    mixer_master.set_volume(0,0.7F,0.9F);
+    mixer_master.set_volume(1,0.5F,0.5F);
+    mixer_master.set_volume(2,1.0F,0.9F);
 
     /*Vibration*/
     // analogWriteFreq(22'000);

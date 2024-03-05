@@ -13,10 +13,10 @@ void Mixer_Output::set_channel(int channel, Audio_Component_Output* generator)
 
 int32_t Mixer_Output::mix(int32_t sample, int32_t pre_sample)
 {
-    if ((pre_sample > 0 && sample > INT32_MAX - pre_sample)) {
-        return INT32_MAX; // Overflow
-    } else if ((pre_sample < 0 && sample < INT32_MIN - pre_sample)) {
-        return INT32_MIN; // Underflow
+    if ((pre_sample > 0 && sample > INT16_MAX - pre_sample)) {
+        return INT16_MAX; // Overflow
+    } else if ((pre_sample < 0 && sample < INT16_MIN - pre_sample)) {
+        return INT16_MIN; // Underflow
     } else {
         return sample + pre_sample; // Normal mix
     }    
@@ -79,6 +79,15 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
 
         //}
 
+        /*Panning and volume*/
+        if(pre_sample.L != 0 && volume_divisorL>1) {
+            //sample->L =sample->L / 2.32F;
+            pre_sample.L = hw_divider_quotient_s32((pre_sample.L)<<MIXER_VOLUME_ACCURACY, volume_divisorL);
+        }
+        if (pre_sample.R != 0 && volume_divisorR>1) { 
+            //sample->R =sample->R / 2.32F;
+            pre_sample.R = hw_divider_quotient_s32((pre_sample.R)<<MIXER_VOLUME_ACCURACY, volume_divisorR);
+        }
 
         /*Mixing based on mono/stereo configurations*/
         if (!pre_sample.is_mono) {
@@ -106,13 +115,7 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
             }
         }
 
-        /*Panning and volume*/
-        if (sample->L != 0 && volume_divisorL>1) {
-            sample->L = hw_divider_quotient_s32((sample->L)<<MIXER_VOLUME_ACCURACY, volume_divisorL);
-        }
-        if (sample->R != 0 && volume_divisorR>1) { 
-            sample->R = hw_divider_quotient_s32((sample->R)<<MIXER_VOLUME_ACCURACY, volume_divisorR);
-        }
+
 
     }
 
