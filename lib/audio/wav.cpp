@@ -208,6 +208,7 @@ size_t Wav_PCM_Stream::write(uint8_t)
     return 0;
 }
 
+/*LIMIT THIS! When pos goes too far (two times too far), it corrupts.*/
 void Wav_PCM_Stream::seek(int pos)
 {
     int setpos = pos;
@@ -222,6 +223,7 @@ void Wav_PCM_Stream::seek(int pos)
     }
 
     _file->seek(setpos);
+    //Serial.println(setpos);
 
 }
 

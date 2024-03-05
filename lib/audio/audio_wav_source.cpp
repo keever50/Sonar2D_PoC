@@ -60,12 +60,15 @@ int Audio_Wav_Source::pitch(float v)
 int Audio_Wav_Source::get_sample(int samplesLeft, Mixer_Sample* sample)
 {
     
-    static int _counter;
+    //static int _counter;
     _counter+=_step_speed;
 
     /*Modify this to work with multiple bitrates and mono*/
     /*Optimize this. Prevent double reads. Prevent single seeks*/
-    _stream.seek((_counter>>AUDIO_WAV_PRECISION)*4);
+    if(((_counter>>AUDIO_WAV_PRECISION)*4)>=_stream._wav.data_size) _counter=0;
+    uint32_t seek = (_counter>>AUDIO_WAV_PRECISION)*4;
+    
+    _stream.seek(seek);
 
     int16_t data;
     data |= (int16_t)(_stream.read())<<0;

@@ -34,5 +34,6 @@ private:
 
     Audio_Info _info;
     File *_file;
+    uint32_t _counter;
 
 };
