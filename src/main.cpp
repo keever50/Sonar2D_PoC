@@ -8,6 +8,7 @@
 #include <audio_mixer.h>
 #include <audio_wav_source.h>
 #include <PWMAudio.h> /*By Earlephilhower. Audio bitrate and modulation fix contribution by Kevin Witteveen*/
+#include <sound_manager.h>
 
 #include <LittleFS.h>
 #include <SD.h> 
@@ -20,11 +21,13 @@
 #define CONTROLS_STRAVE     A2
 
 /*Audio*/
-#define AUDIO_MODULATION_FREQUENCY      100000
-#define AUDIO_MASTER_SAMPLE_RATE        16000
+#define AUDIO_MODULATION_FREQUENCY      200'000
+#define AUDIO_MASTER_SAMPLE_RATE        16'000
 PWMAudio audio_pwm_output(0, true);
 Audio_Wav_Source wav_src;
+//Audio_Wav_Source wav_src2;
 Mixer_Output mixer_master;
+SM_manager sm_manager;
 
 void audio_cb()
 {
@@ -33,7 +36,7 @@ void audio_cb()
         int avail = audio_pwm_output.available();
         if(avail==0)break;
         Mixer_Sample sample;
-        mixer_master.get_sample(avail, &sample);
+        wav_src.get_sample(avail, &sample);
         audio_pwm_output.write((int16_t)(sample.L), true);
         audio_pwm_output.write((int16_t)(sample.R), true);
         //pwm.write((int16_t)0, true);
@@ -95,8 +98,14 @@ void show_inputs()
 ///
 
 map_entity player(MAP_00_test);
+map_entity test_ent(MAP_00_test);
+map_entity test_ent2(MAP_00_test);
 void setup()
 {
+    delay(2000);
+    /*Watch dog to reset the microcontroller when its crashing*/
+    rp2040.wdt_begin(1000);
+
     Serial.begin(115200);   
     Serial.print("\e[25l");
     
@@ -104,6 +113,9 @@ void setup()
     pos.x=10;
     pos.y=10;
     player.set_pos(pos);
+
+    pos.x=50; pos.y=50;
+    test_ent2.set_pos(pos);
 
     /*FS*/
     SPI.setSCK(2);
@@ -113,46 +125,76 @@ void setup()
     SPI.begin(false);
     SD.begin(5, SPI);
     SDFSConfig c2;
-    c2.setSPISpeed(125000000);
+    c2.setSPISpeed(125'000'000);
     c2.setCSPin(5);
     
     SDFS.setConfig(c2);
     SDFS.begin();
 
     /*Audio*/
-    static File file0 = SDFS.open("/BBD.wav", "r");
+    static File file0 = SDFS.open("/amen.wav", "r");
     if(!file0)
     {
         while(true){ delay(500); Serial.println("No file"); }
     }
+
+    // static File file1 = SDFS.open("/BBD.wav", "r");
+    // if(!file1)
+    // {
+    //     while(true){ delay(500); Serial.println("No file"); }
+    // }
+
     audio_pwm_output.setBuffers(4, 256);
     audio_pwm_output.begin(AUDIO_MASTER_SAMPLE_RATE,AUDIO_MODULATION_FREQUENCY);
     audio_pwm_output.onTransmit(audio_cb);
+    ///
 
+
+    /*Source*/
     Audio_Info inf;
     inf.samplerate=AUDIO_MASTER_SAMPLE_RATE;
     inf.stereo=true;
-    wav_src.begin(&inf);
 
+    wav_src.begin(&inf);
     wav_src.load(&file0, true);
 
-    mixer_master.set_channel(0, &wav_src);
-    mixer_master.set_volume(0,1.0F,1.0F);
+    // wav_src2.begin(&inf);
+    // wav_src2.load(&file1, true);
+    // wav_src2.pitch(0.5);
 
-    analogWriteFreq(22000);
-    analogWrite(21, 0);
+    SM_listener listener;
+    listener.ent=&player;
+    listener.muted=false;
+    sm_manager.set_listener(listener);
 
-    analogWriteFreq(22000);
-    analogWrite(9, 0);    
+    // SM_sound_source src;
+    // src.ent=&test_ent;
+    // src.src=&wav_src;
+    // src.muted=false;
+    // sm_manager.add_source(src);
+
+    // SM_sound_source src2;
+    // src2.ent=&test_ent2;
+    // src2.src=&wav_src2;
+    // src2.muted=false;
+    // sm_manager.add_source(src2);
+
+
+
+    sm_manager.start();
+
+    //mixer_master.set_channel(0, &wav_src);
+    //mixer_master.set_channel(1, &wav_src2);
+    //mixer_master.set_volume(0,0.5F,0.5F);
+    //mixer_master.set_volume(1,0.5F,0.5F);
+
+    /*Vibration*/
+    // analogWriteFreq(22'000);
+    // analogWrite(21, 0);
+    // analogWriteFreq(22'000);
+    // analogWrite(9, 0);    
     
 
-    // for(;;)
-    // {
-    //     delay(50);
-    //     show_inputs();
-    //     analogWrite(9, joystick(CONTROLS_AIM)*200.0F);  
-    //     analogWrite(21, -joystick(CONTROLS_AIM)*200.0F);  
-    // }
 }
 
 
@@ -170,28 +212,31 @@ void loop()
     ply_ang=ply_ang+joystick(CONTROLS_AIM)*1.0F;
     player.set_ang(ply_ang);
 
-    map_vect vec;
-    vec.x=0;
-    vec.y=1;
-    float z =player.get_forward().crossZ(vec);
-    float L, R;
+    sm_manager.update();
 
-    if(z>0)
-    {
-        R=1;
-        L=1.0F-z;
-    }else{
-        R=1.0F+z;
-        L=1;
-    }
+    // map_vect vec;
+    // vec.x=0;
+    // vec.y=1;
+    // float z =player.get_forward().crossZ(vec);
+    // float L, R;
+
+    // if(z>0)
+    // {
+    //     R=1;
+    //     L=1.0F-z;
+    // }else{
+    //     R=1.0F+z;
+    //     L=1;
+    // }
 
 
 
-    Serial.printf("L%f, R%f, Z%f\n", L, R, z);
-    map_vect vec_dist = trace_fire_distance(MAP_00_test, player.get_pos(), player.get_forward());
+    //Serial.printf("L%f, R%f, Z%f\n", L, R, z);
+    //map_vect vec_dist = trace_fire_distance(MAP_00_test, player.get_pos(), player.get_forward());
 
     //wav_src.pitch( sqrt( pow(vec_dist.x,2)+pow(vec_dist.y,2) )/25.0F );
-    mixer_master.set_volume(0, L,R);
+   // mixer_master.set_volume(0, L,R);
 
-    delay(10);
+    rp2040.wdt_reset();
+    delay(500);
 }
