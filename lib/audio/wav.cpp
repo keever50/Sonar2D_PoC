@@ -85,6 +85,11 @@ int wav_load_pcm(File file, wav_pcm_s *wav)
 
     /*DATA*/
     uint8_t *data = (uint8_t*)malloc(data_size);
+    if(data == nullptr)
+    {
+        LOG_CRITICAL("WAV not loaded : No memory!");
+        return 1;    
+    }
     file.read(data, data_size);
 
     /*Fill in wav_pcb_s struct*/
@@ -176,6 +181,11 @@ int wav_load_pcm_info(File file, wav_pcm_s *wav)
 
 int wav_unload_pcm(wav_pcm_s *wav)
 {
+    if(wav->data==nullptr)
+    {
+        LOG_CRITICAL("WAV not unloaded : got null pointer");
+        return 1;
+    };
     free(wav->data);
     return 0;
 }

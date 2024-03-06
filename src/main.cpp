@@ -9,6 +9,7 @@
 #include <audio_wav_source.h>
 #include <PWMAudio.h> /*By Earlephilhower. Audio bitrate and modulation fix contribution by Kevin Witteveen*/
 #include <sound_manager.h>
+#include <audio_wav_RAM_source.h>
 
 #include <LittleFS.h>
 #include <SD.h> 
@@ -24,7 +25,7 @@
 #define AUDIO_MODULATION_FREQUENCY      200'000
 #define AUDIO_MASTER_SAMPLE_RATE        8'000
 PWMAudio audio_pwm_output(0, true);
-Audio_Wav_Source wav_src;
+Audio_wav_ram_source wav_src;
 Audio_Wav_Source wav_src2;
 Audio_Wav_Source wav_src3;
 Mixer_Output mixer_master;
@@ -109,9 +110,9 @@ map_entity test_ent(MAP_00_test);
 map_entity test_ent2(MAP_00_test);
 void setup()
 {
-    delay(2000);
+    while(!Serial);
     /*Watch dog to reset the microcontroller when its crashing*/
-    rp2040.wdt_begin(1000);
+    
 
     Serial.begin(115200);   
     Serial.print("\e[25l");
@@ -145,17 +146,17 @@ void setup()
         while(true){ delay(500); Serial.println("No file"); }
     }
 
-    static File file1 = LittleFS.open("/SONAR.wav", "r");
-    if(!file1)
-    {
-        while(true){ delay(500); Serial.println("No file"); }
-    }
+    // static File file1 = LittleFS.open("/SONAR.wav", "r");
+    // if(!file1)
+    // {
+    //     while(true){ delay(500); Serial.println("No file"); }
+    // }
 
-    static File file2 = LittleFS.open("/drip_16b.wav", "r");
-    if(!file2)
-    {
-        while(true){ delay(500); Serial.println("No file"); }
-    }
+    // static File file2 = LittleFS.open("/drip_16b.wav", "r");
+    // if(!file2)
+    // {
+    //     while(true){ delay(500); Serial.println("No file"); }
+    // }
 
 
     audio_pwm_output.setBuffers(4, 100);
@@ -171,15 +172,17 @@ void setup()
 
     
     wav_src.begin(&inf);
-    wav_src.load(&file0, false);
+    int err = wav_src.load(&file0);
+    while(err) delay(500);
+    
 
-    wav_src2.begin(&inf);
-    wav_src2.load(&file1, true);
-    wav_src2.pitch(0.5);
+    // wav_src2.begin(&inf);
+    // wav_src2.load(&file1, true);
+    // //wav_src2.pitch(0.5);
 
-    wav_src3.begin(&inf);
-    wav_src3.load(&file2, true);
-    wav_src3.pitch(1.2);
+    // wav_src3.begin(&inf);
+    // wav_src3.load(&file2, true);
+    // //wav_src3.pitch(1.2);
 
     SM_listener listener;
     listener.ent=&player;
@@ -200,14 +203,14 @@ void setup()
 
 
 
-    sm_manager.start();
+    //sm_manager.start();
 
     mixer_master.set_channel(0, &wav_src);
-    mixer_master.set_channel(1, &wav_src2);
-    mixer_master.set_channel(2, &wav_src3);
+    //mixer_master.set_channel(1, &wav_src2);
+    //mixer_master.set_channel(2, &wav_src3);
     mixer_master.set_volume(0,0.7F,0.9F);
-    mixer_master.set_volume(1,0.5F,0.5F);
-    mixer_master.set_volume(2,1.0F,0.9F);
+    //mixer_master.set_volume(1,0.5F,0.5F);
+    //mixer_master.set_volume(2,1.0F,0.9F);
 
     /*Vibration*/
     // analogWriteFreq(22'000);
@@ -215,7 +218,7 @@ void setup()
     // analogWriteFreq(22'000);
     // analogWrite(9, 0);    
     
-
+    rp2040.wdt_begin(1000);
 }
 
 
@@ -233,7 +236,13 @@ void loop()
     ply_ang=ply_ang+joystick(CONTROLS_AIM)*1.0F;
     player.set_ang(ply_ang);
 
-    sm_manager.update();
+    if(wav_src.error)
+    {
+        Serial.printf("wav err\n");
+    }
+    
+
+    //sm_manager.update();
 
     // map_vect vec;
     // vec.x=0;
