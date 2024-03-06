@@ -140,7 +140,7 @@ void setup()
     LittleFS.begin();
 
     /*Audio*/
-    static File file0 = LittleFS.open("/amen.wav", "r");
+    static File file0 = LittleFS.open("/SONAR_RAM.wav", "r");
     if(!file0)
     {
         while(true){ delay(500); Serial.println("No file"); }
@@ -208,7 +208,7 @@ void setup()
     mixer_master.set_channel(0, &wav_src);
     //mixer_master.set_channel(1, &wav_src2);
     //mixer_master.set_channel(2, &wav_src3);
-    mixer_master.set_volume(0,0.7F,0.9F);
+    mixer_master.set_volume(0,0.8F,0.8F);
     //mixer_master.set_volume(1,0.5F,0.5F);
     //mixer_master.set_volume(2,1.0F,0.9F);
 

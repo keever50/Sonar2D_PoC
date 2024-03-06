@@ -36,6 +36,7 @@ int Audio_wav_ram_source::load(File* file)
         if(_file == nullptr)
         {
             LOG_ERROR("WAV_RAM:load null file"); 
+            return 1;
         }
    
         int err = wav_load_pcm(*_file,&_wav);
@@ -48,7 +49,7 @@ int Audio_wav_ram_source::load(File* file)
 
         /*Calculate sample speed*/
         float speed = (float)(_wav.sample_rate) / (float)(_info.samplerate);
-        _step_speed = (1<<AUDIO_WAV_RAM_PRECISION)*speed*_pitch*_samplesize;   
+        _step_speed = (1<<AUDIO_WAV_RAM_PRECISION)*speed*_pitch*_samplesize;   /*Fixed floating point counter steps*/
 
 
 
@@ -72,6 +73,20 @@ int Audio_wav_ram_source::close()
     return 0;
 }
 
+uint16_t inline audio_wav_ram_amplify_u8_u16(uint8_t b)
+{
+    
+    uint16_t bb=b;
+    bb|=b<<8;
+    return bb;
+}
+
+int16_t inline audio_wav_ram_tosign_u16_s16(uint16_t bb)
+{
+    if(bb<0x7FFF) return bb-0x7FFF;
+    return bb>>1;
+}
+
 int Audio_wav_ram_source::get_sample(int samplesLeft, Mixer_Sample* sample)
 {
     _counter+=_step_speed;
@@ -80,10 +95,10 @@ int Audio_wav_ram_source::get_sample(int samplesLeft, Mixer_Sample* sample)
     if(_counter<0) _counter=_counter+_counter_max;
 
     //static int seek;
-    uint32_t seek = ((uint32_t)_counter>>AUDIO_WAV_RAM_PRECISION);
+    uint32_t seek = ((uint32_t)_counter>>AUDIO_WAV_RAM_PRECISION); /*Fixed floating point. Lower precision so we round into the correct addresses*/
 
     /*Safety*/
-    if(seek>=_wav.data_size-_samplesize)
+    if(seek>=_wav.data_size-_samplesize || seek<0)
     {
         error=1;
         return 1;
@@ -114,6 +129,21 @@ int Audio_wav_ram_source::get_sample(int samplesLeft, Mixer_Sample* sample)
     }
 
     /*TODO: Add 8 bit support. Also 24 and 32 bit if possible.*/
+    if(_wav.bits_per_sample==8)
+    {
+        sample->L=audio_wav_ram_tosign_u16_s16(audio_wav_ram_amplify_u8_u16(_wav.data[seek++]));
+        
+        if(_wav.channels>1)
+        {
+            sample->R=audio_wav_ram_tosign_u16_s16(audio_wav_ram_amplify_u8_u16(_wav.data[seek++]));
+            sample->is_mono=false;           
+        }else{
+            sample->is_mono=true;
+        }
+
+    }
+
+    
 
     return 0;
 }
