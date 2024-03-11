@@ -79,6 +79,10 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
 
         //}
 
+        //Force stereo
+        pre_sample.is_mono=false;
+        pre_sample.R = pre_sample.L;
+
         /*Panning and volume*/
         if(pre_sample.L != 0 && volume_divisorL>1) {
             //sample->L =sample->L / 2.32F;
@@ -89,6 +93,7 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
             pre_sample.R = hw_divider_quotient_s32((pre_sample.R)<<MIXER_VOLUME_ACCURACY, volume_divisorR);
         }
 
+        /*FIX THIS SEE NOTES*/
         /*Mixing based on mono/stereo configurations*/
         if (!pre_sample.is_mono) {
             /*Input is STEREO*/

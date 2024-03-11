@@ -23,32 +23,32 @@
 
 /*Audio*/
 #define AUDIO_MODULATION_FREQUENCY      200'000
-#define AUDIO_MASTER_SAMPLE_RATE        8'000
+#define AUDIO_MASTER_SAMPLE_RATE        16'000
 PWMAudio audio_pwm_output(0, true);
 Audio_wav_ram_source wav_src;
-Audio_Wav_Source wav_src2;
-Audio_Wav_Source wav_src3;
+Audio_wav_ram_source wav_src2;
+Audio_wav_ram_source wav_src3;
 Mixer_Output mixer_master;
 SM_manager sm_manager;
 
 void audio_cb()
 {
     static unsigned long end;
-    Serial.printf("between time: %duS\n",micros()-end);
+    //Serial.printf("between time: %duS\n",micros()-end);
     unsigned long start = micros();
     for(;;)
     {
         int avail = audio_pwm_output.available();
         if(avail==0)break;
         Mixer_Sample sample;
-        mixer_master.get_sample(avail, &sample);
+        sm_manager.get_sample(avail, &sample);
         audio_pwm_output.write((int16_t)(sample.L), true);
         audio_pwm_output.write((int16_t)(sample.R), true);
         //pwm.write((int16_t)0, true);
     }
     end = micros();
     unsigned long delta = end - start;
-    Serial.printf("sound time: %duS\n\n",delta);
+    //Serial.printf("sound time: %duS\n\n",delta);
 }
 ///
 
@@ -111,19 +111,22 @@ map_entity test_ent2(MAP_00_test);
 void setup()
 {
     while(!Serial);
-    /*Watch dog to reset the microcontroller when its crashing*/
-    
+    delay(500);
+
 
     Serial.begin(115200);   
     Serial.print("\e[25l");
     
     map_vect pos;
-    pos.x=10;
-    pos.y=10;
+    pos.x=20;
+    pos.y=20;
     player.set_pos(pos);
 
-    pos.x=50; pos.y=50;
+    pos.x=100; pos.y=100;
     test_ent2.set_pos(pos);
+
+    pos.x=4; pos.y=4;
+    test_ent.set_pos(pos);
 
     /*FS*/
     SPI.setSCK(2);
@@ -140,23 +143,23 @@ void setup()
     LittleFS.begin();
 
     /*Audio*/
-    static File file0 = LittleFS.open("/SONAR_RAM.wav", "r");
+    static File file0 = LittleFS.open("/amen.wav", "r");
     if(!file0)
     {
         while(true){ delay(500); Serial.println("No file"); }
     }
 
-    // static File file1 = LittleFS.open("/SONAR.wav", "r");
-    // if(!file1)
-    // {
-    //     while(true){ delay(500); Serial.println("No file"); }
-    // }
+    static File file1 = LittleFS.open("/DRIP_RAM8.wav", "r");
+    if(!file1)
+    {
+        while(true){ delay(500); Serial.println("No file"); }
+    }
 
-    // static File file2 = LittleFS.open("/drip_16b.wav", "r");
-    // if(!file2)
-    // {
-    //     while(true){ delay(500); Serial.println("No file"); }
-    // }
+    static File file2 = LittleFS.open("/SONAR_RAM.wav", "r");
+    if(!file2)
+    {
+        while(true){ delay(500); Serial.println("No file"); }
+    }
 
 
     audio_pwm_output.setBuffers(4, 100);
@@ -176,40 +179,49 @@ void setup()
     while(err) delay(500);
     
 
-    // wav_src2.begin(&inf);
-    // wav_src2.load(&file1, true);
-    // //wav_src2.pitch(0.5);
+    wav_src2.begin(&inf);
+    err = wav_src2.load(&file1);
+    while(err) delay(500);
 
-    // wav_src3.begin(&inf);
-    // wav_src3.load(&file2, true);
-    // //wav_src3.pitch(1.2);
+
+    wav_src3.begin(&inf);
+    wav_src3.load(&file2);
+    //wav_src3.pitch(1.2);
 
     SM_listener listener;
     listener.ent=&player;
     listener.muted=false;
     sm_manager.set_listener(listener);
 
-    // SM_sound_source src;
-    // src.ent=&test_ent;
-    // src.src=&wav_src;
-    // src.muted=false;
-    // sm_manager.add_source(src);
+    SM_sound_source src;
+    src.ent=&test_ent;
+    src.src=&wav_src;
+    src.muted=false;
+    src.loudness=0.5;
+    sm_manager.add_source(src);
 
-    // SM_sound_source src2;
-    // src2.ent=&test_ent2;
-    // src2.src=&wav_src2;
-    // src2.muted=false;
-    // sm_manager.add_source(src2);
+    SM_sound_source src2;
+    src2.ent=&test_ent2;
+    src2.src=&wav_src2;
+    src2.muted=false;
+    src2.loudness=0.5;
+    sm_manager.add_source(src2);
 
+    SM_sound_source src3;
+    src3.ent=NULL;
+    src3.src=&wav_src3;
+    src3.global=true;
+    src3.muted=false;
+    src3.loudness=0.7;
+    sm_manager.add_source(src3);
 
+    sm_manager.start();
 
-    //sm_manager.start();
-
-    mixer_master.set_channel(0, &wav_src);
-    //mixer_master.set_channel(1, &wav_src2);
-    //mixer_master.set_channel(2, &wav_src3);
-    mixer_master.set_volume(0,0.8F,0.8F);
-    //mixer_master.set_volume(1,0.5F,0.5F);
+    //mixer_master.set_channel(0, &sm_manager);
+    //mixer_master.set_channel(1, &wav_src3);
+    // //mixer_master.set_channel(2, &wav_src3);
+    //mixer_master.set_volume(0,1,1);
+    //mixer_master.set_volume(1,0.1,0.1);
     //mixer_master.set_volume(2,1.0F,0.9F);
 
     /*Vibration*/
@@ -227,46 +239,27 @@ void loop()
     static unsigned long next_map_draw;
     if(millis()>=next_map_draw)
     {
-        //map_draw(MAP_00_test);
-        //draw_ent(&player);
+        map_draw(MAP_00_test);
+        
         next_map_draw=next_map_draw+2000;
     }
     
+    
+    //draw_ent(&test_ent);
+    //show_inputs();
+
     static float ply_ang;
-    ply_ang=ply_ang+joystick(CONTROLS_AIM)*1.0F;
+    ply_ang=ply_ang+joystick(CONTROLS_AIM)*10.0F;
     player.set_ang(ply_ang);
 
-    if(wav_src.error)
-    {
-        Serial.printf("wav err\n");
-    }
-    
+    map_vect move;
+    move = player.get_forward()*joystick(CONTROLS_WALK)*2.0F;
+    move = move + player.get_left()*joystick(CONTROLS_STRAVE)*2.0F;
+    player.move(move);
 
-    //sm_manager.update();
+    sm_manager.update();
 
-    // map_vect vec;
-    // vec.x=0;
-    // vec.y=1;
-    // float z =player.get_forward().crossZ(vec);
-    // float L, R;
-
-    // if(z>0)
-    // {
-    //     R=1;
-    //     L=1.0F-z;
-    // }else{
-    //     R=1.0F+z;
-    //     L=1;
-    // }
-
-
-
-    //Serial.printf("L%f, R%f, Z%f\n", L, R, z);
-    //map_vect vec_dist = trace_fire_distance(MAP_00_test, player.get_pos(), player.get_forward());
-
-    //wav_src.pitch( sqrt( pow(vec_dist.x,2)+pow(vec_dist.y,2) )/25.0F );
-   // mixer_master.set_volume(0, L,R);
-
+    draw_ent(&player);
     rp2040.wdt_reset();
-    delay(500);
+    delay(100);
 }

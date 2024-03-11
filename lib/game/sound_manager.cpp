@@ -11,28 +11,43 @@ int SM_manager::update()
 {
     map_entity* lst_ent = listener.ent;
 
-    for(SM_sound_source src : sources)
+    for(int i=0;i<sources.size();i++)
     {
+        SM_sound_source src = sources[i];
         map_entity* src_ent = src.ent;
 
-        map_vect vec; 
-        vec = src_ent->get_pos();
-        vec = vec - lst_ent->get_pos();
-        vec = vec.normalize();
-        float z = lst_ent->get_forward().crossZ(vec);
-        float L, R;
-
-        if(z>0)
+        if(src.global==false)
         {
-            R=1;
-            L=1.0F-z;
+            map_vect vec; 
+            vec = src_ent->get_pos();
+            vec = vec - lst_ent->get_pos();
+            map_vect dist_vec = vec;
+            vec = vec.normalize();
+            float z = lst_ent->get_forward().crossZ(vec);
+            float L, R;
+
+            if(z>0)
+            {
+                R=1;
+                L=1.0F-z;
+            }else{
+                R=1.0F+z;
+                L=1;
+            }
+
+            float dist = sqrtf((dist_vec.x*dist_vec.x)+(dist_vec.y*dist_vec.y))*src.loudness;
+          
+            if(dist<1) dist=1;
+            L=L/dist;
+            R=R/dist;
+            //Serial.printf("C%d, L%f, R%f, Z%f\n", i, L, R, z);
+            _mixer.set_volume(i, L, R);
+
         }else{
-            R=1.0F+z;
-            L=1;
+            _mixer.set_volume(i, src.loudness, src.loudness);   
         }
 
-        //Serial.printf("L%f, R%f, Z%f\n", L, R, z);
-        _mixer.set_volume(src.ID, L, R);
+
     }
     return 0;   
 }
@@ -52,10 +67,11 @@ int SM_manager::set_listener(SM_listener lst)
 
 int SM_manager::add_source(SM_sound_source src)
 {
-    if(src.ent==nullptr || src.src==nullptr) return 1;
+    if(src.src==nullptr) return 1;
     auto it = sources.insert(sources.end(), src);
     auto index = std::distance(sources.begin(), it);
-    src.ID=_temp_id++;
+    src.ID=_temp_id;
+    _temp_id++;
     _mixer.set_channel(src.ID, src.src);
     if(src.muted==false)
     {

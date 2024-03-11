@@ -82,7 +82,8 @@ int Audio_Wav_Source::get_sample(int samplesLeft, Mixer_Sample* sample)
         int16_t data;
         data |= (int16_t)(_stream.read())<<0;
         data |= (int16_t)(_stream.read())<<8;
-        //data = data <<16;
+
+
         sample->L=data; 
 
         /*Dont do this in mono!*/

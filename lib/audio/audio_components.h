@@ -12,8 +12,8 @@ typedef struct
 
 typedef struct 
 {
-    int32_t L=0;
-    int32_t R=0;
+    int16_t L=0;
+    int16_t R=0;
     bool is_mono=false;
 } Mixer_Sample;
 

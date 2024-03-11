@@ -3,7 +3,7 @@
 #include <wav.h>
 #include <FS.h>
 
-#define AUDIO_WAV_RAM_PRECISION 5
+#define AUDIO_WAV_RAM_PRECISION 7
 
 
 class Audio_wav_ram_source : public Audio_Component_Output

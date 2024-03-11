@@ -127,15 +127,17 @@ int Audio_wav_ram_source::get_sample(int samplesLeft, Mixer_Sample* sample)
             sample->is_mono=true;
         }
     }
-
+    
     /*TODO: Add 8 bit support. Also 24 and 32 bit if possible.*/
     if(_wav.bits_per_sample==8)
     {
-        sample->L=audio_wav_ram_tosign_u16_s16(audio_wav_ram_amplify_u8_u16(_wav.data[seek++]));
-        
+        //sample->L=audio_wav_ram_tosign_u16_s16(audio_wav_ram_amplify_u8_u16(_wav.data[seek++]));
+
+        sample->L=((int16_t)_wav.data[seek++] - 128) * 256;
+
         if(_wav.channels>1)
         {
-            sample->R=audio_wav_ram_tosign_u16_s16(audio_wav_ram_amplify_u8_u16(_wav.data[seek++]));
+            sample->R=sample->L=((int16_t)_wav.data[seek++] - 128) * 256;
             sample->is_mono=false;           
         }else{
             sample->is_mono=true;

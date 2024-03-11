@@ -9,6 +9,8 @@ class SM_sound_source
 public:
     map_entity* ent;
     Audio_Component_Output* src;
+    float loudness=0.5;
+    bool global=false;
     bool muted=false;
     int ID=0;
 };
