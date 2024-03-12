@@ -149,3 +149,15 @@ int Audio_wav_ram_source::get_sample(int samplesLeft, Mixer_Sample* sample)
 
     return 0;
 }
+
+int Audio_wav_ram_source::pitch(float p)
+{
+    if(_pitch==p) return 0;
+    _pitch=p;
+
+    /*Calculate sample speed*/
+    float speed = (float)(_wav.sample_rate) / (float)(_info.samplerate);
+    _step_speed = (1<<AUDIO_WAV_RAM_PRECISION)*speed*_pitch*_samplesize;   /*Fixed floating point counter steps*/
+
+    return 0;    
+}

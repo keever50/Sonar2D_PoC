@@ -35,6 +35,12 @@ int SM_manager::update()
                 L=1;
             }
 
+            if(fabs(z)>0.5)
+            {
+                R=R/4;
+                L=L/4;
+            }
+
             float dist = sqrtf((dist_vec.x*dist_vec.x)+(dist_vec.y*dist_vec.y))*src.loudness;
           
             if(dist<1) dist=1;

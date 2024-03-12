@@ -12,6 +12,7 @@ public:
     int begin(Audio_Info *info);
     int get_sample(int samplesLeft, Mixer_Sample* sample) override;
     int load(File* file);
+    int pitch(float p);
     int close();
 
     ~Audio_wav_ram_source()
