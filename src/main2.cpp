@@ -1,15 +1,15 @@
 #include <Arduino.h>
 
-#include <map_00_test.h>
-#include <map.h>
-#include <trace.h>
+#include <map_00_test.h> /*Demo map, by Kevin Witteveen*/
+#include <map.h> /*By Kevin Witteveen*/
+#include <trace.h> /*By Kevin Witteveen*/
 
-#include <audio_components.h>
-#include <audio_mixer.h>
-#include <audio_wav_source.h>
+#include <audio_components.h> /*By Kevin Witteveen*/
+#include <audio_mixer.h> /*By Kevin Witteveen*/
+#include <audio_wav_source.h> /*By Kevin Witteveen*/
 #include <PWMAudio.h> /*By Earlephilhower. Audio bitrate and modulation fix contribution by Kevin Witteveen*/
-#include <sound_manager.h>
-#include <audio_wav_RAM_source.h>
+#include <sound_manager.h> /*By Kevin Witteveen*/
+#include <audio_wav_RAM_source.h> /*By Kevin Witteveen*/
 
 #include <LittleFS.h>
 #include <SD.h> 
@@ -21,20 +21,17 @@
 #define CONTROLS_WALK       A1
 #define CONTROLS_STRAVE     A2
 
-/*Audio*/
+/*Audio master settings*/
 #define AUDIO_MODULATION_FREQUENCY      200'000
 #define AUDIO_MASTER_SAMPLE_RATE        16'000
-PWMAudio audio_pwm_output(0, true);
-Audio_wav_ram_source wav_src;
-Audio_wav_ram_source wav_src2;
-Audio_wav_ram_source wav_src3;
-Mixer_Output mixer_master;
-SM_manager sm_manager;
 
+/*Audio engine output*/
+PWMAudio audio_pwm_output(0, true);
+SM_manager sm_manager;
 void audio_cb()
 {
     static unsigned long end;
-    //Serial.printf("between time: %duS\n",micros()-end);
+    //Serial.printf("between time: %duS\n",micros()-end); //Benchmarking
     unsigned long start = micros();
     for(;;)
     {
@@ -52,6 +49,7 @@ void audio_cb()
 }
 ///
 
+/*Joystick helper*/
 float joystick(pin_size_t pin)
 {
     float in = (float)(analogRead(pin)-512)/512.0F;
@@ -105,17 +103,15 @@ void show_inputs()
 }
 ///
 
-map_entity player(MAP_00_test);
-map_entity test_ent(MAP_00_test);
-map_entity test_ent2(MAP_00_test);
 
-void sonar()
+
+void sonar(Audio_wav_ram_source &audio, map_entity &player)
 {
     map_vect vec_dist = trace_fire_distance(MAP_00_test, player.get_pos(), player.get_forward());
-    wav_src3.pitch( sqrt( pow(vec_dist.x,2)+pow(vec_dist.y,2) )/25.0F );    
+    audio.pitch( sqrt( pow(vec_dist.x,2)+pow(vec_dist.y,2) )/25.0F );    
 }
 
-void vibrate()
+void vibrate(map_entity &player)
 {
     map_vect vec_distL = trace_fire_distance(MAP_00_test, player.get_pos(), player.get_left());    
     float distL = sqrt( pow(vec_distL.x,2)+pow(vec_distL.y,2) );
@@ -127,24 +123,23 @@ void vibrate()
     /*Vibration*/
     analogWriteFreq(22'000);
 
-    if(distR<2) analogWrite(21, 200);
+    if(distR<4) analogWrite(21, 200/distR);
     else analogWrite(21, 0);
     
-    if(distL<2) analogWrite(9, 200); 
+    if(distL<4) analogWrite(9, 200/distL); 
     else analogWrite(9, 0);   
     
 
 }
 
-void setup()
+int demo()
 {
-    while(!Serial);
-    delay(500);
 
+    /*Demo entities*/
+    map_entity player(MAP_00_test);
+    map_entity test_ent(MAP_00_test);
+    map_entity test_ent2(MAP_00_test);
 
-    Serial.begin(115200);   
-    Serial.print("\e[25l");
-    
     map_vect pos;
     pos.x=20;
     pos.y=20;
@@ -156,37 +151,27 @@ void setup()
     pos.x=4; pos.y=4;
     test_ent.set_pos(pos);
 
-    /*FS*/
-    SPI.setSCK(2);
-    SPI.setTX(3);
-    SPI.setRX(4);
-    SPI.setCS(5);
-    SPI.begin(false);
-    SD.begin(5, SPI);
-    LittleFSConfig c2;
-    //c2.setSPISpeed(125'000'000);
-    //c2.setCSPin(5);
-    
-    LittleFS.setConfig(c2);
-    LittleFS.begin();
 
-    /*Audio*/
+    /*Load audio files from filesystem*/
     static File file0 = LittleFS.open("/amen.wav", "r");
     if(!file0)
     {
-        while(true){ delay(500); Serial.println("No file"); }
+        Serial.println("No file 0");
+        return 1;
     }
 
     static File file1 = LittleFS.open("/DRIP_RAM8.wav", "r");
     if(!file1)
     {
-        while(true){ delay(500); Serial.println("No file"); }
+        Serial.println("No file 1");
+        return 1;
     }
 
     static File file2 = LittleFS.open("/SONAR_RAM.wav", "r");
     if(!file2)
     {
-        while(true){ delay(500); Serial.println("No file"); }
+        Serial.println("No file 2");
+        return 1;
     }
 
     audio_pwm_output.setBuffers(4, 100);
@@ -194,26 +179,35 @@ void setup()
     audio_pwm_output.onTransmit(audio_cb);
     ///
 
-
-    /*Source*/
+    
+    /*Master info*/
     Audio_Info inf;
     inf.samplerate=AUDIO_MASTER_SAMPLE_RATE;
     inf.stereo=true;
 
-    
+    /*Load the WAV files into RAM*/
+    Audio_wav_ram_source wav_src;
+    Audio_wav_ram_source wav_src2;
+    Audio_wav_ram_source wav_src3;
+
     wav_src.begin(&inf);
     int err = wav_src.load(&file0);
-    while(err) delay(500);
-    
+    if(err) return err;
 
     wav_src2.begin(&inf);
     err = wav_src2.load(&file1);
-    while(err) delay(500);
-
+    if(err) return err;
 
     wav_src3.begin(&inf);
-    wav_src3.load(&file2);
-    //wav_src3.pitch(1.2);
+    err = wav_src3.load(&file2);
+    if(err) return err;
+
+    /*Close the files (Otherwise the system will crash on a random moment.)*/
+    file0.close();
+    file1.close();
+    file2.close();
+
+    /*Set and start the sound sources*/
 
     SM_listener listener;
     listener.ent=&player;
@@ -244,50 +238,81 @@ void setup()
 
     sm_manager.start();
 
-    //mixer_master.set_channel(0, &sm_manager);
-    //mixer_master.set_channel(1, &wav_src3);
-    // //mixer_master.set_channel(2, &wav_src3);
-    //mixer_master.set_volume(0,1,1);
-    //mixer_master.set_volume(1,0.1,0.1);
-    //mixer_master.set_volume(2,1.0F,0.9F);
 
-    file0.close();
-    file1.close();
-    file2.close();
+    //return 1;
+    while(true)
+    {
+        static unsigned long next_map_draw;
+        if(millis()>=next_map_draw)
+        {
+            map_draw(MAP_00_test);
+            
+            next_map_draw=next_map_draw+2000;
+        }
+        
+        
+        //draw_ent(&test_ent);
+        //show_inputs();
 
+        static float ply_ang;
+        ply_ang=ply_ang+joystick(CONTROLS_AIM)*10.0F;
+        player.set_ang(ply_ang);
+
+        map_vect move;
+        move = player.get_forward()*joystick(CONTROLS_WALK)*2.0F;
+        move = move + player.get_left()*joystick(CONTROLS_STRAVE)*2.0F;
+        player.move(move);
+
+        sm_manager.update();
+        sonar(wav_src3, player);
+        vibrate(player);
+
+        draw_ent(&player);
+        rp2040.wdt_reset();
+        delay(100);        
+    }
+}
+
+void setup()
+{
+    while(!Serial);
+    delay(500);
+
+
+    Serial.begin(115200);   
+    //Serial.print("\e[25l");
     
+
+
+    /*FS*/
+    SPI.setSCK(2);
+    SPI.setTX(3);
+    SPI.setRX(4);
+    SPI.setCS(5);
+    SPI.begin(false);
+    SD.begin(5, SPI);
+    LittleFSConfig c2;
+    //c2.setSPISpeed(125'000'000);
+    //c2.setCSPin(5);
+    
+    LittleFS.setConfig(c2);
+    LittleFS.begin();
+
+
+    /*Start watchdog to restart after freezes*/
     rp2040.wdt_begin(200);
 }
 
 
 void loop()
 {
-    static unsigned long next_map_draw;
-    if(millis()>=next_map_draw)
+    Serial.println("Starting demo");
+    demo();
+    Serial.println("\0m\e[H\e[JDemo failed. Restarting...");
+    for(int i=0;i<20;i++)
     {
-        map_draw(MAP_00_test);
-        
-        next_map_draw=next_map_draw+2000;
+        delay(100);
+        rp2040.wdt_reset();
     }
-    
-    
-    //draw_ent(&test_ent);
-    //show_inputs();
 
-    static float ply_ang;
-    ply_ang=ply_ang+joystick(CONTROLS_AIM)*10.0F;
-    player.set_ang(ply_ang);
-
-    map_vect move;
-    move = player.get_forward()*joystick(CONTROLS_WALK)*2.0F;
-    move = move + player.get_left()*joystick(CONTROLS_STRAVE)*2.0F;
-    player.move(move);
-
-    sm_manager.update();
-    sonar();
-    vibrate();
-
-    draw_ent(&player);
-    rp2040.wdt_reset();
-    delay(100);
 }

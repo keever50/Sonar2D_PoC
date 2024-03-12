@@ -17,6 +17,7 @@ public:
 
     ~Audio_wav_ram_source()
     {
+        Serial.println("Destroying wav ram source");
         close();
     }
 

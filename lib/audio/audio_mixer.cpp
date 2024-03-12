@@ -79,17 +79,16 @@ int Mixer_Output::get_sample(int samplesLeft, Mixer_Sample *sample)
 
         //}
 
-        //Force stereo
+        ////////HOTFIX : Forced stereo. Fix mono->stereo issue, see notes//////////
         pre_sample.is_mono=false;
         pre_sample.R = pre_sample.L;
+        //////////////////////////////////////////////////////////////////////////
 
-        /*Panning and volume*/
+        /*Panning and volume with hardware division*/
         if(pre_sample.L != 0 && volume_divisorL>1) {
-            //sample->L =sample->L / 2.32F;
             pre_sample.L = hw_divider_quotient_s32((pre_sample.L)<<MIXER_VOLUME_ACCURACY, volume_divisorL);
         }
         if (pre_sample.R != 0 && volume_divisorR>1) { 
-            //sample->R =sample->R / 2.32F;
             pre_sample.R = hw_divider_quotient_s32((pre_sample.R)<<MIXER_VOLUME_ACCURACY, volume_divisorR);
         }
 
