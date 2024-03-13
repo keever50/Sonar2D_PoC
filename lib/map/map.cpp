@@ -32,6 +32,7 @@ void map_draw( const uint8_t *map )
     int sequential=0;
     for(uint y=0;y<MAP_SIZE;y++)
     {
+        rp2040.wdt_reset();
         Serial.printf("\e[%d;1H", 1+y);
         for(uint x=0; x<MAP_SIZE; x++)
         {

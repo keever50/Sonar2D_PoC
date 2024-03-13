@@ -22,7 +22,7 @@
 #define CONTROLS_STRAVE     A2
 
 /*Audio master settings*/
-#define AUDIO_MODULATION_FREQUENCY      200'000
+#define AUDIO_MODULATION_FREQUENCY      50'000
 #define AUDIO_MASTER_SAMPLE_RATE        16'000
 
 /*Audio engine output*/
@@ -145,10 +145,10 @@ int demo()
     pos.y=20;
     player.set_pos(pos);
 
-    pos.x=100; pos.y=100;
+    pos.x=121; pos.y=7;
     test_ent2.set_pos(pos);
 
-    pos.x=4; pos.y=4;
+    pos.x=9; pos.y=118;
     test_ent.set_pos(pos);
 
 
@@ -160,7 +160,7 @@ int demo()
         return 1;
     }
 
-    static File file1 = LittleFS.open("/DRIP_RAM8.wav", "r");
+    static File file1 = LittleFS.open("/KEYBOARD_RAM8.wav", "r");
     if(!file1)
     {
         Serial.println("No file 1");
@@ -260,7 +260,7 @@ int demo()
 
         map_vect move;
         move = player.get_forward()*joystick(CONTROLS_WALK)*2.0F;
-        move = move + player.get_left()*joystick(CONTROLS_STRAVE)*2.0F;
+        move = move + player.get_left()*joystick(CONTROLS_STRAVE)*-2.0F;
         player.move(move);
 
         sm_manager.update();
