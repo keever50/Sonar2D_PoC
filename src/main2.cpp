@@ -16,7 +16,7 @@
 #include <SDFS.h> 
 
 /*Controls*/
-#define JOYSTICK_INNER_DEADZONE 0.06F
+#define JOYSTICK_INNER_DEADZONE 0.09F
 #define CONTROLS_AIM        A0
 #define CONTROLS_WALK       A1
 #define CONTROLS_STRAVE     A2
@@ -238,6 +238,7 @@ int demo()
 
     sm_manager.start();
 
+    //Serial.printf("");
 
     //return 1;
     while(true)
@@ -245,9 +246,12 @@ int demo()
         static unsigned long next_map_draw;
         if(millis()>=next_map_draw)
         {
-            map_draw(MAP_00_test);
-            
+            //map_draw(MAP_00_test);
+            //draw_ent(&player);
             next_map_draw=next_map_draw+2000;
+            Serial.printf("X%f, Y%f\n", player.get_pos().x, player.get_pos().y);
+            Serial.printf("A %fd\n\n", fmodf(player.get_ang(),360.0F));
+            
         }
         
         
@@ -267,7 +271,7 @@ int demo()
         sonar(wav_src3, player);
         vibrate(player);
 
-        draw_ent(&player);
+        //draw_ent(&player);
         rp2040.wdt_reset();
         delay(100);        
     }
@@ -279,7 +283,7 @@ void setup()
     delay(500);
 
 
-    Serial.begin(115200);   
+    Serial.begin(19200);   
     //Serial.print("\e[25l");
     
 
